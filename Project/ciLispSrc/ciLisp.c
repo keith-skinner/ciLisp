@@ -44,6 +44,8 @@ AST_NODE *number(double value)
     return p;
 }
 
+
+
 //
 // create a node for a function
 //
@@ -83,18 +85,47 @@ void freeNode(AST_NODE *p)
     free(p);
 }
 
-//
-// evaluate an abstract syntax tree
-//
-// p points to the root
-//
+double evalFunction(AST_NODE *p)
+{
+    switch( resolveFunc(p->data.function.name) )
+    {
+        case NEG:   return -eval(p->data.function.op1);
+        case ABS:   return fabs(eval(p->data.function.op1));
+        case EXP:   return exp(eval(p->data.function.op1));
+        case SQRT:  return sqrt(eval(p->data.function.op1));
+        case ADD:   return eval(p->data.function.op1) + eval(p->data.function.op2);
+        case SUB:   return eval(p->data.function.op1) - eval(p->data.function.op1);
+        case MULT:  return eval(p->data.function.op1) * eval(p->data.function.op1);
+        case DIV:   return eval(p->data.function.op1) / eval(p->data.function.op1);
+        case LOG:   return log10(eval(p->data.function.op1));
+        case POW:   return pow(eval(p->data.function.op1), eval(p->data.function.op2));
+        case MAX:   return fmax(eval(p->data.function.op1), eval(p->data.function.op2));
+        case MIN:   return fmin(eval(p->data.function.op1), eval(p->data.function.op2));
+        case EXP2:  return exp2(eval(p->data.function.op1));
+        case CBRT:  return cbrt(eval(p->data.function.op1));
+        case HYPOT: return hypot(eval(p->data.function.op1), eval(p->data.function.op2));
+        case REMAINDER: return fmod(eval(p->data.function.op1), eval(p->data.function.op2));
+        default:
+            fprintf(stderr, "ERROR evalFunction %d", resolveFunc(p->data.function.name));
+            return 0.0;
+    }
+}
+
 double eval(AST_NODE *p)
 {
     if (!p)
         return 0.0;
 
-// TBD: implement
-
-    return 0.0;
+    double value = 0.0;
+    switch( p->type )
+    {
+        case NUM_TYPE:
+            value = p->data.number.value;
+            break;
+        case FUNC_TYPE:
+            value = evalFunction(p);
+            break;
+    }
+    return value;
 }  
 

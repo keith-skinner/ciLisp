@@ -45,11 +45,11 @@ s_expr:
 
 f_expr:
     LPAREN FUNC s_expr RPAREN {
-        fprintf(stderr, "yacc: s_expr ::= LPAREN FUNC expr RPAREN\n");
+        fprintf(stderr, "yacc: f_expr ::= LPAREN FUNC expr RPAREN\n");
         $$ = function($2, $3, 0);
     }
     | LPAREN FUNC s_expr s_expr RPAREN {
-        fprintf(stderr, "yacc: s_expr ::= LPAREN FUNC expr expr RPAREN\n");
+        fprintf(stderr, "yacc: f_expr ::= LPAREN FUNC expr expr RPAREN\n");
         $$ = function($2, $3, $4);
     };
 %%

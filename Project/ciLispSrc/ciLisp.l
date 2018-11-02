@@ -6,50 +6,43 @@
     #include "ciLisp.h"
 %}
 
-digit [0-9]
-number {digit}+(\.{digit}+)?
-func "neg"|"abs"|"exp"|"sqrt"|"add"|"sub"|"mult"|"div"|"remainder"|"log"|"pow"|"max"|"min"
+digit   [0-9]
+num     {digit}+(\.{digit}+)?
+func    "neg"|"abs"|"exp"|"sqrt"|"add"|"sub"|"mult"|"div"|"remainder"|"log"|"pow"|"max"|"min"
 
 %%
 
-{number} {
-    yylval.dval = strtod(yytext, NULL);
-    fprintf(stderr, "lex: NUMBER dval = %lf\n", yylval.dval);
-    return NUMBER;
-    }
+{num}   {
+            yylval.dval = strtod(yytext, NULL);
+            fprintf(stderr, "lex: NUMBER dval = %lf\n", yylval.dval);
+            return NUMBER;
+        }
+"quit"  {
+            return QUIT;
+        }
+{func}  {
+            yylval.sval = (char *) malloc(strlen(yytext)*sizeof(char));
+            strcpy(yylval.sval, yytext);
+            fprintf(stderr, "lex: FUNC sval = %s\n", yylval.sval);
+            return FUNC;
+        }
+"("     {
+            fprintf(stderr, "lex: LPAREN\n");
+            return LPAREN;
+        }
+")"     {
+            fprintf(stderr, "lex: RPAREN\n");
+            return RPAREN;
+        }
+[\n]    {
+            fprintf(stderr, "lex: EOL\n");
+            YY_FLUSH_BUFFER;
+            return EOL;
+        }
 
-"quit" {
-    return QUIT;
-    }
 
-{func} {
-    yylval.sval = (char *) malloc(strlen(yytext)*sizeof(char));
-    strcpy(yylval.sval, yytext);
-    fprintf(stderr, "lex: FUNC sval = %s\n", yylval.sval);
-    return FUNC;
-    }
-
-"(" {
-    fprintf(stderr, "lex: LPAREN\n");
-    return LPAREN;
-    }
-
-")" {
-    fprintf(stderr, "lex: RPAREN\n");
-    return RPAREN;
-    }
-
-[\n] {
-    fprintf(stderr, "lex: EOL\n");
-    YY_FLUSH_BUFFER;
-    return EOL;
-    }
-
-[ |\t] ; /* skip whitespace */
-
-. { // anything else
-    printf("ERROR: invalid character: >>%s<<\n", yytext);
-    }
+[[:space:]] ; /* skip whitespace */
+.       { printf("ERROR: invalid character: >>%s<<\n", yytext); }
 
 %%
 
