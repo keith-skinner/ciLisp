@@ -81,32 +81,31 @@ void freeNode(AST_NODE *p)
         freeNode(p->data.function.op1);
         freeNode(p->data.function.op2);
     }
-
     free(p);
 }
 
-double evalFunction(AST_NODE *p)
+double evalFunction(OPER_TYPE type, double op1, double op2)
 {
-    switch( resolveFunc(p->data.function.name) )
+    switch( type )
     {
-        case NEG:   return -eval(p->data.function.op1);
-        case ABS:   return fabs(eval(p->data.function.op1));
-        case EXP:   return exp(eval(p->data.function.op1));
-        case SQRT:  return sqrt(eval(p->data.function.op1));
-        case ADD:   return eval(p->data.function.op1) + eval(p->data.function.op2);
-        case SUB:   return eval(p->data.function.op1) - eval(p->data.function.op1);
-        case MULT:  return eval(p->data.function.op1) * eval(p->data.function.op1);
-        case DIV:   return eval(p->data.function.op1) / eval(p->data.function.op1);
-        case LOG:   return log10(eval(p->data.function.op1));
-        case POW:   return pow(eval(p->data.function.op1), eval(p->data.function.op2));
-        case MAX:   return fmax(eval(p->data.function.op1), eval(p->data.function.op2));
-        case MIN:   return fmin(eval(p->data.function.op1), eval(p->data.function.op2));
-        case EXP2:  return exp2(eval(p->data.function.op1));
-        case CBRT:  return cbrt(eval(p->data.function.op1));
-        case HYPOT: return hypot(eval(p->data.function.op1), eval(p->data.function.op2));
-        case REMAINDER: return fmod(eval(p->data.function.op1), eval(p->data.function.op2));
+        case NEG: return -op1;
+        case ABS: return fabs(op1);
+        case EXP: return exp(op1);
+        case SQRT: return sqrt(op1);
+        case ADD: return op1 + op2;
+        case SUB: return op1 - op2;
+        case MULT: return op1 * op2;
+        case DIV: return op1 / op2;
+        case LOG: return log10(op1);
+        case POW: return pow(op1, op2);
+        case MAX: return fmax(op1, op2);
+        case MIN: return fmin(op1, op2);
+        case EXP2: return exp2(op1);
+        case CBRT: return cbrt(op1);
+        case HYPOT: return hypot(op1, op2);
+        case REMAINDER: return fmod(op1, op2);
         default:
-            fprintf(stderr, "ERROR evalFunction %d", resolveFunc(p->data.function.name));
+            fprintf(stderr, "ERROR invalid function: %d", type);
             return 0.0;
     }
 }
@@ -115,17 +114,18 @@ double eval(AST_NODE *p)
 {
     if (!p)
         return 0.0;
-
-    double value = 0.0;
     switch( p->type )
     {
         case NUM_TYPE:
-            value = p->data.number.value;
-            break;
+            return p->data.number.value;
         case FUNC_TYPE:
-            value = evalFunction(p);
-            break;
+            return evalFunction(
+                resolveFunc(p->data.function.name),
+                eval(p->data.function.op1),
+                eval(p->data.function.op2) 
+            );
+        default:
+            printf("ERROR invalid node type: %d\n", p->type);
+            return 0.0;
     }
-    return value;
 }  
-

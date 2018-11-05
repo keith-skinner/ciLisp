@@ -1,6 +1,7 @@
 #ifndef __cilisp_h_
 #define __cilisp_h_
 
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
@@ -65,5 +66,7 @@ AST_NODE *function(char *funcName, AST_NODE *op1, AST_NODE *op2);
 void freeNode(AST_NODE *p);
 
 double eval(AST_NODE *ast);
+
+
 
 #endif
