@@ -17,7 +17,8 @@ int yylex(void);
 
 void yyerror(char *);
 
-typedef enum oper { // must be in sync with funcs in resolveFunc()
+typedef enum oper 
+{ // must be in sync with funcs in resolveFunc()
     NEG,
     ABS,
     EXP,
@@ -38,35 +39,61 @@ typedef enum oper { // must be in sync with funcs in resolveFunc()
 } OPER_TYPE;
 
 typedef enum {
-    NUM_TYPE, FUNC_TYPE
+    NUM_TYPE, FUNC_TYPE, SYM_TYPE
 } AST_NODE_TYPE;
 
-typedef struct {
+
+typedef struct 
+{
+    char * name;
+} SYMBOL_AST_NODE;
+
+typedef struct 
+{
     double value;
 } NUMBER_AST_NODE;
 
-typedef struct {
+typedef struct 
+{
     char *name;
     struct ast_node *op1;
     struct ast_node *op2;
 } FUNCTION_AST_NODE;
 
-typedef struct ast_node {
+typedef struct ast_node 
+{
+    struct symbol_table_node * scope;
+    struct ast_node * parent;
     AST_NODE_TYPE type;
-    union {
+    union 
+    {
         NUMBER_AST_NODE number;
         FUNCTION_AST_NODE function;
+        SYMBOL_AST_NODE symbol;
     } data;
 } AST_NODE;
 
+typedef struct symbol_table_node 
+{
+    char *ident;
+    struct ast_node *val;
+    struct symbol_table_node *next;
+} SYMBOL_TABLE_NODE;
+
+AST_NODE *symbol(char * name);
 AST_NODE *number(double value);
+AST_NODE *function(char *name, AST_NODE *op1, AST_NODE *op2);
 
-AST_NODE *function(char *funcName, AST_NODE *op1, AST_NODE *op2);
+AST_NODE *scope(SYMBOL_TABLE_NODE * scope, AST_NODE * s_expr);
 
+SYMBOL_TABLE_NODE * let_elem(char *name, AST_NODE *s_expr);
+SYMBOL_TABLE_NODE * let_list(SYMBOL_TABLE_NODE * list, SYMBOL_TABLE_NODE * elem);
+
+void freeTable(SYMBOL_TABLE_NODE *p);
 void freeNode(AST_NODE *p);
 
-double eval(AST_NODE *ast);
-
-
+double symbolEval(AST_NODE * p, char * name);
+double functionEval(AST_NODE * p);
+double eval(AST_NODE * p);
 
 #endif

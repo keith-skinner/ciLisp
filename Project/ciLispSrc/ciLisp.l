@@ -4,60 +4,63 @@
 
 %{
     #include "ciLisp.h"
-
-    #define GET_MACRO(_1, _2, NAME, ...) \
-        NAME
-    
-    #define ldebug2(token, value) \
-        fprintf(stderr, #token "(" #value ")\n" )
-
-    #define ldebug1(token) \
-        fprintf(stderr, #token "\n")
-
-    #define ldebug(...) GET_MACRO(__VA_ARGS__, ldebug2, ldebug1)(__VA_ARGS__)
 %}
 
 digit   [0-9]
 num     {digit}+(\.{digit}+)?
+
+letter  [a-zA-Z]
+symbol  {letter}+
+
 func    "neg"|"abs"|"exp"|"sqrt"|"add"|"sub"|"mult"|"div"|"remainder"|"log"|"pow"|"max"|"min"
 
 %%
 
-{num}   {
-            ldebug(NUMBER, yylval);
-            fprintf(stderr, "lex: NUMBER dval = %lf\n", yylval.dval);
-            yylval.dval = strtod(yytext, NULL);
-            return NUMBER;
-        }
+{num}       {
+                yylval.dval = strtod(yytext, NULL);
+                fprintf(stderr, "NUMBER(%lf)\n", yylval.dval);
+                return NUMBER;
+            }
 
-"quit"  {
-            ldebug(QUIT);
-            return QUIT;
-        }
+"let"       {
+                fprintf(stderr, "LET\n");
+                return LET;
+            }
 
-{func}  {
-            ldebug(FUNC, yylval.sval);
-            fprintf(stderr, "lex: FUNC sval = %s\n", yylval.sval);
-            yylval.sval = (char *) malloc(strlen(yytext)*sizeof(char));
-            strcpy(yylval.sval, yytext);
-            return FUNC;
-        }
+"quit"      {
+                fprintf(stderr, "QUIT\n");
+                return QUIT;
+            }
 
-"("     {
-            fprintf(stderr, "lex: LPAREN\n");
-            return LPAREN;
-        }
+{func}      {
+                fprintf(stderr, "FUNC(%s)\n", yytext);
+                yylval.sval = (char *) malloc(strlen(yytext)*sizeof(char));
+                strcpy(yylval.sval, yytext);
+                return FUNC;
+            }
 
-")"     {
-            fprintf(stderr, "lex: RPAREN\n");
-            return RPAREN;
-        }
+{symbol}    {
+                fprintf(stderr, "SYMBOL(%s)\n", yytext);
+                yylval.sval = (char*) malloc(strlen(yytext) * sizeof(char));
+                strcpy(yylval.sval, yytext);
+                return SYMBOL;
+            }
 
-[\n]    {
-            fprintf(stderr, "lex: EOL\n");
-            YY_FLUSH_BUFFER;
-            return EOL;
-        }
+"("         {
+                fprintf(stderr, "LPAREN\n");
+                return LPAREN;
+            }
+
+")"         {
+                fprintf(stderr, "RPAREN\n");
+                return RPAREN;
+            }
+
+[\n]        {
+                fprintf(stderr, "EOL\n");
+                YY_FLUSH_BUFFER;
+                return EOL;
+            }
 
 
 [[:space:]] ; /* skip whitespace */
@@ -112,9 +115,10 @@ getline(char **buf, size_t *bufsiz, FILE *fp)
 /*
  * DO NOT CHANGE THE FOLLOWING CODE CRITICAL FOR REPL!
  */
-int main(void) {
-
-    //   freopen("/dev/null", "w", stderr); // except for this line that can be uncommented to throw away debug printouts
+int main(void) 
+{
+    // except for this line that can be uncommented to throw away debug printouts
+    // freopen("/dev/null", "w", stderr);
 
     char *s_expr_str = NULL;
     size_t s_expr_str_len = 0;

@@ -6,13 +6,15 @@
     double dval;
     char *sval;
     struct ast_node *astNode;
+    struct symbol_table_node *symNode;
 };
 
-%token <sval> FUNC
+%token <sval> FUNC SYMBOL
 %token <dval> NUMBER
-%token LPAREN RPAREN EOL QUIT
+%token LPAREN RPAREN EOL QUIT LET
 
 %type <astNode> s_expr f_expr
+%type <symNode> scope let_list let_elem
 
 %%
 
@@ -26,12 +28,21 @@ program:
     };
 
 s_expr:
-    NUMBER {
+    f_expr {
+        fprintf(stderr, "[ f_expr ] => s_expr\n");
+        $$ = $1;
+    }
+    | NUMBER {
         fprintf(stderr, "[ NUMBER ] => s_expr\n");
         $$ = number($1);
     }
-    | f_expr {
-        $$ = $1;
+    | SYMBOL {
+        fprintf(stderr, "[ SYMBOL ] => s_expr\n");
+        $$ = symbol($1);
+    }
+    | LPAREN scope s_expr RPAREN {
+        fprintf(stderr, "[ LPAREN scope s_expr RPAREN ] => s_expr\n");
+        $$ = scope($2, $3);
     }
     | QUIT {
         fprintf(stderr, "[ QUIT ] => s_expr\n");
@@ -52,5 +63,31 @@ f_expr:
         fprintf(stderr, "[ LPAREN FUNC expr expr RPAREN ] => f_expr\n");
         $$ = function($2, $3, $4);
     };
-%%
 
+scope:
+    /* NADA */ {
+        fprintf(stderr, "[ nothing ] => scope\n");
+        $$ = NULL;
+    }
+    | LPAREN LET let_list RPAREN {
+        fprintf(stderr, "LPAREN LET let_list RPAREN\n");
+        $$ = $3;
+    };
+
+let_list:
+    let_elem {
+        fprintf(stderr, "[ let_elem ] => let_list\n");
+        $$ = $1
+    }
+    | let_list let_elem {
+        fprintf(stderr, "[ let_list let_elem ] => let_list\n");
+        $$ = let_list($1, $2);
+    };
+
+let_elem:
+    LPAREN SYMBOL s_expr RPAREN {
+        fprintf(stderr, "[ LPAREN SYMBOL s_expr RPAREN ] => let_elem\n");
+        $$ = let_elem($2, $3);
+    };
+
+%%
