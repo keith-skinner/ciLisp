@@ -12,15 +12,10 @@ num     {digit}+(\.{digit}+)?
 letter  [a-zA-Z]
 symbol  {letter}+
 
+type    "integer"|"real"
 func    "neg"|"abs"|"exp"|"sqrt"|"add"|"sub"|"mult"|"div"|"remainder"|"log"|"pow"|"max"|"min"
 
 %%
-
-{num}       {
-                yylval.dval = strtod(yytext, NULL);
-                fprintf(stderr, "NUMBER(%lf)\n", yylval.dval);
-                return NUMBER;
-            }
 
 "let"       {
                 fprintf(stderr, "LET\n");
@@ -32,17 +27,28 @@ func    "neg"|"abs"|"exp"|"sqrt"|"add"|"sub"|"mult"|"div"|"remainder"|"log"|"pow
                 return QUIT;
             }
 
+{type}      {
+                fprintf(stderr, "TYPE(%s)\n", yylval.sval);
+                return TYPE;
+            }
+
 {func}      {
-                fprintf(stderr, "FUNC(%s)\n", yytext);
                 yylval.sval = (char *) malloc(strlen(yytext)*sizeof(char));
                 strcpy(yylval.sval, yytext);
+                fprintf(stderr, "FUNC(%s)\n", yylval.sval);
                 return FUNC;
             }
 
+{num}       {
+                yylval.dval = strtod(yytext, NULL);
+                fprintf(stderr, "NUMBER(%lf)\n", yylval.dval);
+                return NUMBER;
+            }
+
 {symbol}    {
-                fprintf(stderr, "SYMBOL(%s)\n", yytext);
                 yylval.sval = (char*) malloc(strlen(yytext) * sizeof(char));
                 strcpy(yylval.sval, yytext);
+                fprintf(stderr, "SYMBOL(%s)\n", yylval.sval);
                 return SYMBOL;
             }
 
