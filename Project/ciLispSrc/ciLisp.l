@@ -74,6 +74,8 @@ func    "neg"|"abs"|"exp"|"sqrt"|"add"|"sub"|"mult"|"div"|"remainder"|"log"|"pow
 
 %%
 
+#define KEITH
+#ifdef KEITH
 ssize_t getdelim(char **buf, size_t *bufsiz, int delimiter, FILE *fp)
 {
 	char *ptr, *eptr;
@@ -117,6 +119,7 @@ getline(char **buf, size_t *bufsiz, FILE *fp)
 {
 	return getdelim(buf, bufsiz, '\n', fp);
 }
+#endif //KEITH
 
 /*
  * DO NOT CHANGE THE FOLLOWING CODE CRITICAL FOR REPL!

@@ -9,7 +9,7 @@
     struct symbol_table_node *symNode;
 };
 
-%token <sval> FUNC SYMBOL
+%token <sval> FUNC SYMBOL TYPE
 %token <dval> NUMBER
 %token LPAREN RPAREN EOL QUIT LET
 
@@ -65,7 +65,7 @@ f_expr:
     };
 
 scope:
-    /* NADA */ {
+    /* EMPTY */ {
         fprintf(stderr, "[ nothing ] => scope\n");
         $$ = NULL;
     }
@@ -85,9 +85,13 @@ let_list:
     };
 
 let_elem:
-    LPAREN SYMBOL s_expr RPAREN {
+    LPAREN TYPE SYMBOL s_expr RPAREN {
         fprintf(stderr, "[ LPAREN SYMBOL s_expr RPAREN ] => let_elem\n");
-        $$ = let_elem($2, $3);
+        $$ = let_elem($2, $3, $4);
+    }
+    | LPAREN SYMBOL s_expr RPAREN {
+        fprintf(stderr, "[ LPAREN SYMBOL s_expr RPAREN ] => let_elem\n");
+        $$ = let_elem(NULL, $2, $3);
     };
 
 %%
