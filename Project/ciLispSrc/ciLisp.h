@@ -38,6 +38,19 @@ typedef enum oper
     INVALID_OPER=255
 } OPER_TYPE;
 
+typedef enum 
+{ 
+    NO_TYPE, 
+    INTEGER_TYPE, 
+    REAL_TYPE 
+} DATA_TYPE;
+
+typedef struct return_value {
+  DATA_TYPE type;
+  double value;
+} RETURN_VALUE;
+
+
 typedef enum {
     NUM_TYPE, FUNC_TYPE, SYM_TYPE
 } AST_NODE_TYPE;
@@ -73,12 +86,13 @@ typedef struct ast_node
     } data;
 } AST_NODE;
 
-typedef struct symbol_table_node 
-{
-    char *ident;
-    struct ast_node *val;
-    struct symbol_table_node *next;
+typedef struct symbol_table_node {
+   DATA_TYPE val_type;
+   char *ident;
+   struct ast_node *val;
+   struct symbol_table_node *next;
 } SYMBOL_TABLE_NODE;
+
 
 AST_NODE *symbol(char * name);
 AST_NODE *number(double value);
@@ -86,14 +100,14 @@ AST_NODE *function(char *name, AST_NODE *op1, AST_NODE *op2);
 
 AST_NODE *scope(SYMBOL_TABLE_NODE * scope, AST_NODE * s_expr);
 
-SYMBOL_TABLE_NODE * let_elem(char *name, AST_NODE *s_expr);
+SYMBOL_TABLE_NODE * let_elem(char * type, char *name, AST_NODE *s_expr);
 SYMBOL_TABLE_NODE * let_list(SYMBOL_TABLE_NODE * list, SYMBOL_TABLE_NODE * elem);
 
 void freeTable(SYMBOL_TABLE_NODE *p);
 void freeNode(AST_NODE *p);
 
-double symbolEval(AST_NODE * p, char * name);
-double functionEval(AST_NODE * p);
-double eval(AST_NODE * p);
+RETURN_VALUE symbolEval(AST_NODE * p, char * name);
+RETURN_VALUE functionEval(AST_NODE * p);
+RETURN_VALUE eval(AST_NODE * p);
 
 #endif
