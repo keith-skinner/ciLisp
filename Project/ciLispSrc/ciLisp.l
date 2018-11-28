@@ -4,6 +4,17 @@
 
 %{
     #include "ciLisp.h"
+
+    #define GET_MACRO(_1, _2, NAME, ...) \
+        NAME
+    
+    #define ldebug2(token, value) \
+        fprintf(stderr, #token "(" #value ")\n" )
+
+    #define ldebug1(token) \
+        fprintf(stderr, #token "\n")
+
+    #define ldebug(...) GET_MACRO(__VA_ARGS__, ldebug2, ldebug1)(__VA_ARGS__)
 %}
 
 digit   [0-9]
@@ -13,27 +24,35 @@ func    "neg"|"abs"|"exp"|"sqrt"|"add"|"sub"|"mult"|"div"|"remainder"|"log"|"pow
 %%
 
 {num}   {
-            yylval.dval = strtod(yytext, NULL);
+            ldebug(NUMBER, yylval);
             fprintf(stderr, "lex: NUMBER dval = %lf\n", yylval.dval);
+            yylval.dval = strtod(yytext, NULL);
             return NUMBER;
         }
+
 "quit"  {
+            ldebug(QUIT);
             return QUIT;
         }
+
 {func}  {
+            ldebug(FUNC, yylval.sval);
+            fprintf(stderr, "lex: FUNC sval = %s\n", yylval.sval);
             yylval.sval = (char *) malloc(strlen(yytext)*sizeof(char));
             strcpy(yylval.sval, yytext);
-            fprintf(stderr, "lex: FUNC sval = %s\n", yylval.sval);
             return FUNC;
         }
+
 "("     {
             fprintf(stderr, "lex: LPAREN\n");
             return LPAREN;
         }
+
 ")"     {
             fprintf(stderr, "lex: RPAREN\n");
             return RPAREN;
         }
+
 [\n]    {
             fprintf(stderr, "lex: EOL\n");
             YY_FLUSH_BUFFER;

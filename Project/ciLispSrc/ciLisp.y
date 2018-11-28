@@ -18,7 +18,7 @@
 
 program:
     s_expr EOL {
-        fprintf(stderr, "yacc: program ::= s_expr EOL\n");
+        fprintf(stderr, "[ s_expr EOL ] => program\n");
         if ($1) {
             printf("%lf", eval($1));
             freeNode($1);
@@ -27,29 +27,29 @@ program:
 
 s_expr:
     NUMBER {
-        fprintf(stderr, "yacc: s_expr ::= NUMBER\n");
+        fprintf(stderr, "[ NUMBER ] => s_expr\n");
         $$ = number($1);
     }
     | f_expr {
         $$ = $1;
     }
     | QUIT {
-        fprintf(stderr, "yacc: s_expr ::= QUIT\n");
+        fprintf(stderr, "[ QUIT ] => s_expr\n");
         exit(EXIT_SUCCESS);
     }
     | error {
-        fprintf(stderr, "yacc: s_expr ::= error\n");
+        fprintf(stderr, "[ error ] => s_expr\n");
         yyerror("unexpected token");
         $$ = NULL;
     };
 
 f_expr:
     LPAREN FUNC s_expr RPAREN {
-        fprintf(stderr, "yacc: f_expr ::= LPAREN FUNC expr RPAREN\n");
+        fprintf(stderr, "[ LPAREN FUNC expr RPAREN ] => f_expr\n");
         $$ = function($2, $3, 0);
     }
     | LPAREN FUNC s_expr s_expr RPAREN {
-        fprintf(stderr, "yacc: f_expr ::= LPAREN FUNC expr expr RPAREN\n");
+        fprintf(stderr, "[ LPAREN FUNC expr expr RPAREN ] => f_expr\n");
         $$ = function($2, $3, $4);
     };
 %%
