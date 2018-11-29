@@ -45,7 +45,8 @@ typedef enum
     REAL_TYPE 
 } DATA_TYPE;
 
-typedef struct return_value {
+typedef struct return_value 
+{
   DATA_TYPE type;
   double value;
 } RETURN_VALUE;
@@ -86,7 +87,8 @@ typedef struct ast_node
     } data;
 } AST_NODE;
 
-typedef struct symbol_table_node {
+typedef struct symbol_table_node 
+{
    DATA_TYPE val_type;
    char *ident;
    struct ast_node *val;

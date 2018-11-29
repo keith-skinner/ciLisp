@@ -22,7 +22,7 @@ program:
     s_expr EOL {
         fprintf(stderr, "[ s_expr EOL ] => program\n");
         if ($1) {
-            printf("%lf", eval($1));
+            printf("%lf", eval($1).value);
             freeNode($1);
         }
     };
