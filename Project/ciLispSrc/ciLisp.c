@@ -7,7 +7,7 @@ void yyerror(char *s) {
 }
 
 
-SYMBOL_TABLE_NODE * findSymbol(SYMBOL_TABLE_NODE * symbol, char * name)
+SYMBOL_TABLE_NODE * findSymbol(SYMBOL_TABLE_NODE * symbol, const char * name)
 {
     while (symbol != NULL) {
         if ( strcmp(name, symbol->ident) == 0 )
@@ -37,7 +37,7 @@ DATA_TYPE resolveType(char * type)
     if (strcmp(type, "real") == 0)
         return REAL_TYPE;
     
-    yyerror("Unknown type");
+    yyerror("unknown type");
     return NO_TYPE;
 }
 
@@ -141,7 +141,16 @@ void freeNode(AST_NODE *p)
     free(p);
 }
 
-double evalCall(OPER_TYPE func, double op1, double op2)
+double divide(double op1, double op2)
+{
+    if (op2 == 0.0) {
+        yyerror("dividing by zero");
+        return 0.0;
+    }
+    return op1 / op2;
+}
+
+double evalFunctionValue(OPER_TYPE func, double op1, double op2)
 {
     switch( func )
     {
@@ -152,12 +161,7 @@ double evalCall(OPER_TYPE func, double op1, double op2)
         case ADD:       return op1 + op2;
         case SUB:       return op1 - op2;
         case MULT:      return op1 * op2;
-        case DIV:       
-            if (op2 == 0.0) {
-                yyerror("Dividing by zero");
-                return 0.0;
-            }
-            return op1 / op2;
+        case DIV:       return divide(op1, op2);
         case LOG:       return log10(op1);
         case POW:       return pow(op1, op2);
         case MAX:       return fmax(op1, op2);
@@ -167,53 +171,46 @@ double evalCall(OPER_TYPE func, double op1, double op2)
         case HYPOT:     return hypot(op1, op2);
         case REMAINDER: return fmod(op1, op2);
         default:
-            yyerror("Undefined function");
-            return 0.0;
+            yyerror("undefined function");
     }
+    return 0.0;
 }
 
-DATA_TYPE evalType(OPER_TYPE func, DATA_TYPE op1, DATA_TYPE op2)
+DATA_TYPE evalFunctionType(OPER_TYPE func, DATA_TYPE op1, DATA_TYPE op2)
 {
-
-    if (op1 == INTEGER_TYPE && op2 == INTEGER_TYPE) {    
-        switch (func) {
-            case ADD:
-            case SUB:
-            case MULT:
-            case NEG:
+    if (op1 == INTEGER_TYPE) {
+        if (func == NEG)
+            return INTEGER_TYPE;
+        
+        if (func == ADD || func == SUB || func == MULT)
+            if (op2 == INTEGER_TYPE)
                 return INTEGER_TYPE;
-            default:
-                return REAL_TYPE;
-        }
     }
-
-    if (op1 == NO_TYPE && op2 == NO_TYPE)
-        return NO_TYPE;
-
     return REAL_TYPE;
 }
 
-RETURN_VALUE cast(DATA_TYPE type, RETURN_VALUE value)
+RETURN_VALUE evalFunction(OPER_TYPE func, RETURN_VALUE op1, RETURN_VALUE op2)
 {
-    if (type == REAL_TYPE && value.type == INTEGER_TYPE)
-        yyerror("WARNING: incompatible type assignment for variables");
-    if (type == INTEGER_TYPE)
-            value.value = round(value.value);
+    return (RETURN_VALUE){
+        evalFunctionType(func, op1.type, op2.type), 
+        evalFunctionValue(func, op1.value, op2.value) 
+    };
+}
+
+RETURN_VALUE evalSymbolCast(SYMBOL_TABLE_NODE * node, RETURN_VALUE value)
+{   
+    if (node->val_type == INTEGER_TYPE && value.type == REAL_TYPE) {
+        printf("WARNING: incompatible type assignment for variables %s\n", node->ident);
+        return (RETURN_VALUE){ INTEGER_TYPE, round(value.value) };
+    }
+    if (node->val_type == INTEGER_TYPE)
+        return (RETURN_VALUE){ INTEGER_TYPE, round(value.value) };
+
+    if (node->val_type == REAL_TYPE)
+        return (RETURN_VALUE){ REAL_TYPE, value.value };
+
     return value;
 }
-
-RETURN_VALUE evalFunction(AST_NODE * p)
-{
-    RETURN_VALUE op1 = eval(p->data.function.op1);
-    RETURN_VALUE op2 = eval(p->data.function.op2);
-    OPER_TYPE func = resolveFunc(p->data.function.name);
-    return cast(
-        evalType(func, op1.type, op2.type), 
-        (RETURN_VALUE){NO_TYPE, evalCall(func, op1.value, op2.value)}
-    );
-}
-
-
 
 RETURN_VALUE evalSymbol(AST_NODE * p, char * name)
 {
@@ -224,7 +221,7 @@ RETURN_VALUE evalSymbol(AST_NODE * p, char * name)
 
     SYMBOL_TABLE_NODE * node = findSymbol(p->scope, name);
     if (node != NULL)
-        return cast(node->val_type, eval(node->val));
+        return evalSymbolCast(node, eval(node->val));
     return evalSymbol(p->parent, name);
 }
 
@@ -235,12 +232,10 @@ RETURN_VALUE eval(AST_NODE *p)
 
     switch( p->type )
     {
-        case NUM_TYPE:
-            return (RETURN_VALUE) { NO_TYPE, p->data.number.value };
-        case FUNC_TYPE:
-            return evalFunction(p);
-        case SYM_TYPE:
-            return evalSymbol(p, p->data.symbol.name);
+        case NUM_TYPE:  return (RETURN_VALUE) { NO_TYPE, p->data.number.value };
+        case FUNC_TYPE: return evalFunction(resolveFunc(p->data.function.name), 
+                            eval(p->data.function.op1), eval(p->data.function.op2));
+        case SYM_TYPE:  return evalSymbol(p, p->data.symbol.name);
         default:
             yyerror("Unkown node type");
             return (RETURN_VALUE) { NO_TYPE, 0.0 };

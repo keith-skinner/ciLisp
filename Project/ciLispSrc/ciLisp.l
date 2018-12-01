@@ -28,6 +28,8 @@ func    "neg"|"abs"|"exp"|"sqrt"|"add"|"sub"|"mult"|"div"|"remainder"|"log"|"pow
             }
 
 {type}      {
+                yylval.sval = (char *) malloc(strlen(yytext)*sizeof(char));
+                strcpy(yylval.sval, yytext);
                 fprintf(stderr, "TYPE(%s)\n", yylval.sval);
                 return TYPE;
             }
