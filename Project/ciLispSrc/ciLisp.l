@@ -129,7 +129,7 @@ getline(char **buf, size_t *bufsiz, FILE *fp)
 int main(void) 
 {
     // except for this line that can be uncommented to throw away debug printouts
-    // freopen("/dev/null", "w", stderr);
+    freopen("/dev/null", "w", stderr);
 
     char *s_expr_str = NULL;
     size_t s_expr_str_len = 0;

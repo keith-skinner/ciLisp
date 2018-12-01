@@ -179,8 +179,8 @@ double evalFunctionValue(OPER_TYPE func, double op1, double op2)
 
 DATA_TYPE evalFunctionType(OPER_TYPE func, DATA_TYPE op1, DATA_TYPE op2)
 {
-
-    if (op1 == INTEGER_TYPE) {
+    if (op1 == INTEGER_TYPE) 
+    {
         if (func == NEG)
             return INTEGER_TYPE;
         
@@ -195,7 +195,8 @@ void print(RETURN_VALUE op)
 {
     if (op.type == INTEGER_TYPE)
         printf("=> %.0lf\n", op.value);
-    printf("=> %.2lf\n", op.value);
+    else 
+        printf("=> %.2lf\n", op.value);
 }
 
 RETURN_VALUE evalFunction(OPER_TYPE func, RETURN_VALUE op1, RETURN_VALUE op2)
