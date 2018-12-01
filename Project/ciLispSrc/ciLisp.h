@@ -35,6 +35,7 @@ typedef enum oper
     EXP2,
     CBRT,
     HYPOT,
+    PRINT,
     INVALID_OPER=255
 } OPER_TYPE;
 

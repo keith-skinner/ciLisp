@@ -55,7 +55,8 @@ int resolveFunc(char *func)
     char *funcs[] = {
         "neg", "abs", "exp", "sqrt", "add", "sub", 
         "mult", "div", "remainder", "log", "pow", 
-        "max", "min", ""
+        "max", "min", "exp2", "cbrt", "hypot", 
+        "print", ""
     };
 
     int i = 0;
@@ -178,6 +179,7 @@ double evalFunctionValue(OPER_TYPE func, double op1, double op2)
 
 DATA_TYPE evalFunctionType(OPER_TYPE func, DATA_TYPE op1, DATA_TYPE op2)
 {
+
     if (op1 == INTEGER_TYPE) {
         if (func == NEG)
             return INTEGER_TYPE;
@@ -189,8 +191,21 @@ DATA_TYPE evalFunctionType(OPER_TYPE func, DATA_TYPE op1, DATA_TYPE op2)
     return REAL_TYPE;
 }
 
+void print(RETURN_VALUE op) 
+{
+    if (op.type == INTEGER_TYPE)
+        printf("=> %.0lf\n", op.value);
+    printf("=> %.2lf\n", op.value);
+}
+
 RETURN_VALUE evalFunction(OPER_TYPE func, RETURN_VALUE op1, RETURN_VALUE op2)
 {
+    if (func == PRINT)
+    {
+        print(op1);
+        return op1;
+    }
+
     return (RETURN_VALUE){
         evalFunctionType(func, op1.type, op2.type), 
         evalFunctionValue(func, op1.value, op2.value) 
