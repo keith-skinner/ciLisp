@@ -1,4 +1,5 @@
 #include "ciLisp.h"
+#include <limits.h>
 
 void yyerror(char *s) {
     printf("\nERROR: %s\n", s);
@@ -72,10 +73,13 @@ int resolveFunc(char *func)
     return INVALID_OPER;
 }
 
-AST_NODE *s_expr_list(AST_NODE *s_expr, AST_NODE * s_expr_list)
+AST_NODE *s_expr_list(AST_NODE *s_expr_list, AST_NODE * s_expr)
 {
-    s_expr->next = s_expr_list;
-    return s_expr;
+    AST_NODE * head = s_expr_list;
+    while(s_expr_list->next != NULL)
+        s_expr_list = s_expr_list->next;
+    s_expr_list->next = s_expr;
+    return head;
 }
 
 AST_NODE *scope(SYMBOL_TABLE_NODE * scope, AST_NODE * s_expr)
@@ -395,4 +399,4 @@ RETURN_VALUE eval(AST_NODE *p)
             yyerror("Unkown node type");
             return (RETURN_VALUE) { NO_TYPE, 0.0 };
     }
-}  
+}
