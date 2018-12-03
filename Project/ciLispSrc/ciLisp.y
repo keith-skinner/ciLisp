@@ -13,7 +13,7 @@
 %token <dval> NUMBER
 %token LPAREN RPAREN EOL QUIT LET
 
-%type <astNode> s_expr f_expr
+%type <astNode> s_expr f_expr s_expr_list
 %type <symNode> scope let_list let_elem
 
 %%
@@ -55,14 +55,25 @@ s_expr:
     };
 
 f_expr:
-    LPAREN FUNC s_expr RPAREN {
-        fprintf(stderr, "[ LPAREN FUNC expr RPAREN ] => f_expr\n");
-        $$ = function($2, $3, 0);
-    }
-    | LPAREN FUNC s_expr s_expr RPAREN {
-        fprintf(stderr, "[ LPAREN FUNC expr expr RPAREN ] => f_expr\n");
-        $$ = function($2, $3, $4);
+    LPAREN FUNC s_expr_list RPAREN {
+        fprintf(stderr, "[ LPAREN FUNC s_expr_list RPAREN ] => f_expr\n");
+        $$ = function($2, $3);
     };
+
+s_expr_list:
+    /* EMPTY */ {
+        fprintf(stderr, "[ EMPTY ] => s_expr_list\n");
+        $$ = NULL;
+    }
+    | s_expr {
+        fprintf(stderr, "[ s_expr ] => s_expr_list\n");
+        $$ = $1;
+    }
+    | s_expr_list s_expr { //TODO: put s_expr on the other side might help.
+        fprintf(stderr, "[] => s_expr_list\n");
+        $$ = s_expr_list($1, $2);
+    };
+
 
 scope:
     /* EMPTY */ {

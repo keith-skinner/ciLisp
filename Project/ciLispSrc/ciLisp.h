@@ -71,8 +71,7 @@ typedef struct
 typedef struct 
 {
     char *name;
-    struct ast_node *op1;
-    struct ast_node *op2;
+    struct ast_node *opList;
 } FUNCTION_AST_NODE;
 
 typedef struct ast_node 
@@ -86,6 +85,7 @@ typedef struct ast_node
         FUNCTION_AST_NODE function;
         SYMBOL_AST_NODE symbol;
     } data;
+    struct ast_node * next;
 } AST_NODE;
 
 typedef struct symbol_table_node 
@@ -99,18 +99,16 @@ typedef struct symbol_table_node
 
 AST_NODE *symbol(char * name);
 AST_NODE *number(double value);
-AST_NODE *function(char *name, AST_NODE *op1, AST_NODE *op2);
+AST_NODE *function(char *name, AST_NODE *opList);
 
 AST_NODE *scope(SYMBOL_TABLE_NODE * scope, AST_NODE * s_expr);
+AST_NODE *s_expr_list(AST_NODE *s_expr, AST_NODE * s_expr_list);
 
 SYMBOL_TABLE_NODE * let_elem(char * type, char *name, AST_NODE *s_expr);
 SYMBOL_TABLE_NODE * let_list(SYMBOL_TABLE_NODE * list, SYMBOL_TABLE_NODE * elem);
 
-void freeTable(SYMBOL_TABLE_NODE *p);
 void freeNode(AST_NODE *p);
 
-RETURN_VALUE symbolEval(AST_NODE * p, char * name);
-RETURN_VALUE functionEval(AST_NODE * p);
 RETURN_VALUE eval(AST_NODE * p);
 
 #endif

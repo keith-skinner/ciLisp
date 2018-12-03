@@ -53,10 +53,12 @@ SYMBOL_TABLE_NODE * let_elem(char * type, char * name, AST_NODE * s_expr)
 int resolveFunc(char *func)
 {
     char *funcs[] = {
-        "neg", "abs", "exp", "sqrt", "add", "sub", 
-        "mult", "div", "remainder", "log", "pow", 
-        "max", "min", "exp2", "cbrt", "hypot", 
-        "print", ""
+        "neg",  "abs",  "exp",
+        "sqrt", "add",  "sub",
+        "mult", "div",  "remainder",
+        "log",  "pow",  "max",
+        "min",  "exp2", "cbrt",
+        "hypot", "print", ""
     };
 
     int i = 0;
@@ -68,6 +70,12 @@ int resolveFunc(char *func)
     }
     yyerror("invalid function");
     return INVALID_OPER;
+}
+
+AST_NODE *s_expr_list(AST_NODE *s_expr, AST_NODE * s_expr_list)
+{
+    s_expr->next = s_expr_list;
+    return s_expr;
 }
 
 AST_NODE *scope(SYMBOL_TABLE_NODE * scope, AST_NODE * s_expr)
@@ -99,16 +107,21 @@ AST_NODE *number(double value)
     return p;
 }
 
-AST_NODE *function(char *funcName, AST_NODE *op1, AST_NODE *op2)
+void functionParent(AST_NODE * p)
+{
+    AST_NODE * op = p->data.function.opList;
+    while (op != NULL) {
+        op->parent = p;
+        op = op->next;
+    }
+}
+
+AST_NODE *function(char *funcName, AST_NODE *opList)
 {
     AST_NODE *p = makeNode(FUNC_TYPE);
     p->data.function.name = funcName;
-    p->data.function.op1 = op1;
-    p->data.function.op2 = op2;
-    if (p->data.function.op1 != NULL)
-        p->data.function.op1->parent = p;
-    if (p->data.function.op2 != NULL)
-        p->data.function.op2->parent = p;
+    p->data.function.opList = opList;
+    functionParent(p);
     return p;
 }
 
@@ -132,14 +145,27 @@ void freeNode(AST_NODE *p)
     if (p->type == FUNC_TYPE)
     {
         free(p->data.function.name);
-        freeNode(p->data.function.op1);
-        freeNode(p->data.function.op2);
+        freeNode(p->data.function.opList);
     }
     else if (p->type == SYM_TYPE)
     {
         free(p->data.symbol.name);
     }
     free(p);
+}
+
+DATA_TYPE evalFunctionType(OPER_TYPE func, DATA_TYPE op1, DATA_TYPE op2)
+{
+    if (op1 == INTEGER_TYPE)
+    {
+        if (func == NEG)
+            return INTEGER_TYPE;
+
+        if (func == ADD || func == SUB || func == MULT)
+            if (op2 == INTEGER_TYPE)
+                return INTEGER_TYPE;
+    }
+    return REAL_TYPE;
 }
 
 double divide(double op1, double op2)
@@ -151,6 +177,48 @@ double divide(double op1, double op2)
     return op1 / op2;
 }
 
+void printVal(RETURN_VALUE op)
+{
+    if (op.type == INTEGER_TYPE)
+        printf(" %.0lf", op.value);
+    else
+        printf(" %.2lf", op.value);
+}
+
+void print(AST_NODE * opList)
+{
+    if (opList == NULL)
+        return;
+    printVal(eval(opList));
+    print(opList->next);
+}
+
+RETURN_VALUE add(AST_NODE * opList)
+{
+    if (opList == NULL)
+        return (RETURN_VALUE){ NO_TYPE, 0.0 };
+
+    RETURN_VALUE rest = add(opList->next);
+    RETURN_VALUE this = eval(opList);
+    return (RETURN_VALUE) {
+        evalFunctionType(ADD, this.type, rest.type),
+        this.value + rest.value
+    };
+}
+
+RETURN_VALUE mult(AST_NODE * opList)
+{
+    if (opList == NULL)
+        return (RETURN_VALUE) { NO_TYPE, 1.1 };
+
+    RETURN_VALUE rest = mult(opList->next);
+    RETURN_VALUE this = eval(opList);
+    return (RETURN_VALUE) {
+        evalFunctionType(MULT, this.type, rest.type),
+        this.value * rest.value
+    };
+}
+
 double evalFunctionValue(OPER_TYPE func, double op1, double op2)
 {
     switch( func )
@@ -159,16 +227,14 @@ double evalFunctionValue(OPER_TYPE func, double op1, double op2)
         case ABS:       return fabs(op1);
         case EXP:       return exp(op1);
         case SQRT:      return sqrt(op1);
-        case ADD:       return op1 + op2;
-        case SUB:       return op1 - op2;
-        case MULT:      return op1 * op2;
-        case DIV:       return divide(op1, op2);
         case LOG:       return log10(op1);
+        case EXP2:      return exp2(op1);
+        case CBRT:      return cbrt(op1);
+        case SUB:       return op1 - op2;
+        case DIV:       return divide(op1, op2);
         case POW:       return pow(op1, op2);
         case MAX:       return fmax(op1, op2);
         case MIN:       return fmin(op1, op2);
-        case EXP2:      return exp2(op1);
-        case CBRT:      return cbrt(op1);
         case HYPOT:     return hypot(op1, op2);
         case REMAINDER: return fmod(op1, op2);
         default:
@@ -177,40 +243,114 @@ double evalFunctionValue(OPER_TYPE func, double op1, double op2)
     return 0.0;
 }
 
-DATA_TYPE evalFunctionType(OPER_TYPE func, DATA_TYPE op1, DATA_TYPE op2)
+int countParameters(AST_NODE * opList)
 {
-    if (op1 == INTEGER_TYPE) 
-    {
-        if (func == NEG)
-            return INTEGER_TYPE;
-        
-        if (func == ADD || func == SUB || func == MULT)
-            if (op2 == INTEGER_TYPE)
-                return INTEGER_TYPE;
+    int count = 0;
+    while (opList != NULL) {
+        ++count;
+        opList = opList->next;
     }
-    return REAL_TYPE;
+    return count;
 }
 
-void print(RETURN_VALUE op) 
+int maxParameters(OPER_TYPE func)
 {
-    if (op.type == INTEGER_TYPE)
-        printf("=> %.0lf\n", op.value);
-    else 
-        printf("=> %.2lf\n", op.value);
+    switch( func )
+    {
+        //unary functions
+        case NEG:       return 1;
+        case ABS:       return 1;
+        case EXP:       return 1;
+        case SQRT:      return 1;
+        case LOG:       return 1;
+        case CBRT:      return 1;
+
+        //binary functions
+        case SUB:       return 2;
+        case DIV:       return 2;
+        case POW:       return 2;
+        case MAX:       return 2;
+        case MIN:       return 2;
+        case HYPOT:     return 2;
+        case REMAINDER: return 2;
+        case EXP2:      return 2;
+
+        //N-ary functions
+        case PRINT:     return INT_MAX;
+        case ADD:       return INT_MAX;
+        case MULT:      return INT_MAX;
+
+        default:
+            yyerror("undefined function");
+    }
+    return 0;
 }
 
-RETURN_VALUE evalFunction(OPER_TYPE func, RETURN_VALUE op1, RETURN_VALUE op2)
+int minParameters(OPER_TYPE func)
 {
-    if (func == PRINT)
+    switch( func )
     {
-        print(op1);
-        return op1;
-    }
+        //unary functions
+        case NEG:       return 1;
+        case ABS:       return 1;
+        case EXP:       return 1;
+        case SQRT:      return 1;
+        case LOG:       return 1;
+        case CBRT:      return 1;
 
-    return (RETURN_VALUE){
-        evalFunctionType(func, op1.type, op2.type), 
-        evalFunctionValue(func, op1.value, op2.value) 
-    };
+        //binary functions
+        case SUB:       return 2;
+        case DIV:       return 2;
+        case POW:       return 2;
+        case MAX:       return 2;
+        case MIN:       return 2;
+        case HYPOT:     return 2;
+        case REMAINDER: return 2;
+        case EXP2:      return 2;
+
+        //nary functions
+        case PRINT:     return 1;
+        case ADD:       return 2;
+        case MULT:      return 2;
+
+        default:
+            yyerror("undefined function");
+    }
+    return 0;
+}
+
+bool evalFunctionNumParameters(char * funcName, OPER_TYPE func, AST_NODE * opList)
+{
+    int count = countParameters(opList);
+    if (count < minParameters(func)) {
+        printf("ERROR: too few parameters for the function %s", funcName);
+        return false;
+    }
+    if (count > maxParameters(func))
+        printf("WARNING: too many parameters for the function %s", funcName);
+    return true;
+}
+
+
+RETURN_VALUE evalFunction(char * funcName, AST_NODE * opList)
+{
+    OPER_TYPE func = resolveFunc(funcName);
+    if (!evalFunctionNumParameters(funcName, func, opList))
+        return (RETURN_VALUE){ NO_TYPE, 0.0 };
+
+    if (func == PRINT) {
+        printf("=>");
+        print(opList);
+        printf("\n");
+    }
+    if (func == ADD)
+        return add(opList);
+
+    if (func == MULT)
+        return mult(opList);
+
+
+    return (RETURN_VALUE){ NO_TYPE, 0.0 };
 }
 
 RETURN_VALUE evalSymbolCast(SYMBOL_TABLE_NODE * node, RETURN_VALUE value)
@@ -249,8 +389,7 @@ RETURN_VALUE eval(AST_NODE *p)
     switch( p->type )
     {
         case NUM_TYPE:  return (RETURN_VALUE) { NO_TYPE, p->data.number.value };
-        case FUNC_TYPE: return evalFunction(resolveFunc(p->data.function.name), 
-                            eval(p->data.function.op1), eval(p->data.function.op2));
+        case FUNC_TYPE: return evalFunction(p->data.function.name, p->data.function.opList);
         case SYM_TYPE:  return evalSymbol(p, p->data.symbol.name);
         default:
             yyerror("Unkown node type");
