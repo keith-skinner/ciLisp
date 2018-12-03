@@ -36,10 +36,7 @@ typedef enum oper
     CBRT,
     HYPOT,
     PRINT,
-<<<<<<< HEAD
     RAND,
-=======
->>>>>>> 7215257... Done with task 6
     EQUAL,
     SMALLER,
     LARGER,
