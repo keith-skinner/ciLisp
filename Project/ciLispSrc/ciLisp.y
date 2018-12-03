@@ -11,7 +11,7 @@
 
 %token <sval> FUNC SYMBOL TYPE
 %token <dval> NUMBER
-%token LPAREN RPAREN EOL QUIT LET
+%token LPAREN RPAREN EOL QUIT LET COND
 
 %type <astNode> s_expr f_expr s_expr_list
 %type <symNode> scope let_list let_elem
@@ -43,6 +43,10 @@ s_expr:
     | LPAREN scope s_expr RPAREN {
         fprintf(stderr, "[ LPAREN scope s_expr RPAREN ] => s_expr\n");
         $$ = scope($2, $3);
+    }
+    | LPAREN COND s_expr s_expr s_expr RPAREN {
+        fprintf(stderr, "[ LPAREN COND s_expr s_expr s_expr RPAREN ] => s_expr\n");
+        $$ = condition($3, $4, $5);
     }
     | QUIT {
         fprintf(stderr, "[ QUIT ] => s_expr\n");

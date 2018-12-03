@@ -59,7 +59,8 @@ int resolveFunc(char *func)
         "mult", "div",  "remainder",
         "log",  "pow",  "max",
         "min",  "exp2", "cbrt",
-        "hypot", "print", ""
+        "hypot", "print", "equal",
+        "smaller", "larger", ""
     };
 
     int i = 0;
@@ -111,6 +112,12 @@ AST_NODE *number(double value)
     return p;
 }
 
+void setParent(AST_NODE * p, AST_NODE * child)
+{
+    if (child != NULL)
+        child->parent = p;
+}
+
 void functionParent(AST_NODE * p)
 {
     AST_NODE * op = p->data.function.opList;
@@ -126,6 +133,18 @@ AST_NODE *function(char *funcName, AST_NODE *opList)
     p->data.function.name = funcName;
     p->data.function.opList = opList;
     functionParent(p);
+    return p;
+}
+
+AST_NODE *condition(AST_NODE * cond, AST_NODE * nonzero, AST_NODE * zero)
+{
+    AST_NODE *p = makeNode(COND_TYPE);
+    p->data.condition.cond = cond;
+    p->data.condition.zero = zero;
+    p->data.condition.nonzero = nonzero;
+    setParent(p, p->data.condition.cond);
+    setParent(p, p->data.condition.zero);
+    setParent(p, p->data.condition.nonzero);
     return p;
 }
 
@@ -227,6 +246,9 @@ double evalFunctionValue(OPER_TYPE func, double op1, double op2)
 {
     switch( func )
     {
+        case EQUAL:     return op1 == op2;
+        case SMALLER:   return op1 < op2;
+        case LARGER:    return op1 > op2;
         case NEG:       return -op1;
         case ABS:       return fabs(op1);
         case EXP:       return exp(op1);
@@ -262,27 +284,33 @@ int maxParameters(OPER_TYPE func)
     switch( func )
     {
         //unary functions
-        case NEG:       return 1;
-        case ABS:       return 1;
-        case EXP:       return 1;
-        case SQRT:      return 1;
-        case LOG:       return 1;
-        case CBRT:      return 1;
+        case NEG:
+        case ABS:
+        case EXP:
+        case SQRT:
+        case LOG:
+        case CBRT:
+            return 1;
 
         //binary functions
-        case SUB:       return 2;
-        case DIV:       return 2;
-        case POW:       return 2;
-        case MAX:       return 2;
-        case MIN:       return 2;
-        case HYPOT:     return 2;
-        case REMAINDER: return 2;
-        case EXP2:      return 2;
+        case SUB:
+        case DIV:
+        case POW:
+        case MAX:
+        case MIN:
+        case HYPOT:
+        case REMAINDER:
+        case EXP2:
+        case EQUAL:
+        case SMALLER:
+        case LARGER:
+            return 2;
 
         //N-ary functions
-        case PRINT:     return INT_MAX;
-        case ADD:       return INT_MAX;
-        case MULT:      return INT_MAX;
+        case PRINT:
+        case ADD:
+        case MULT:
+            return INT_MAX;
 
         default:
             yyerror("undefined function");
@@ -294,28 +322,29 @@ int minParameters(OPER_TYPE func)
 {
     switch( func )
     {
-        //unary functions
-        case NEG:       return 1;
-        case ABS:       return 1;
-        case EXP:       return 1;
-        case SQRT:      return 1;
-        case LOG:       return 1;
-        case CBRT:      return 1;
+        case PRINT:
+        case NEG:
+        case ABS:
+        case EXP:
+        case SQRT:
+        case LOG:
+        case CBRT:
+            return 1;
 
-        //binary functions
-        case SUB:       return 2;
-        case DIV:       return 2;
-        case POW:       return 2;
-        case MAX:       return 2;
-        case MIN:       return 2;
-        case HYPOT:     return 2;
-        case REMAINDER: return 2;
-        case EXP2:      return 2;
-
-        //nary functions
-        case PRINT:     return 1;
-        case ADD:       return 2;
-        case MULT:      return 2;
+        case ADD:
+        case MULT:
+        case SUB:
+        case DIV:
+        case POW:
+        case MAX:
+        case MIN:
+        case HYPOT:
+        case REMAINDER:
+        case EXP2:
+        case EQUAL:
+        case SMALLER:
+        case LARGER:
+            return 2;
 
         default:
             yyerror("undefined function");
@@ -353,8 +382,12 @@ RETURN_VALUE evalFunction(char * funcName, AST_NODE * opList)
     if (func == MULT)
         return mult(opList);
 
-
-    return (RETURN_VALUE){ NO_TYPE, 0.0 };
+    RETURN_VALUE v1 = eval(opList);
+    RETURN_VALUE v2 = eval(opList->next);
+    return (RETURN_VALUE) {
+            evalFunctionType(func, v1.type, v2.type),
+            evalFunctionValue(func, v1.value, v2.value)
+    };
 }
 
 RETURN_VALUE evalSymbolCast(SYMBOL_TABLE_NODE * node, RETURN_VALUE value)
@@ -385,8 +418,16 @@ RETURN_VALUE evalSymbol(AST_NODE * p, char * name)
     return evalSymbol(p->parent, name);
 }
 
+RETURN_VALUE evalCondition(AST_NODE *p)
+{
+    return eval(p->data.condition.cond).value ?
+            eval(p->data.condition.nonzero) :
+            eval(p->data.condition.zero);
+}
+
 RETURN_VALUE eval(AST_NODE *p)
 {
+
     if (p == NULL)
         return (RETURN_VALUE) { NO_TYPE, 0.0 };
 
@@ -395,6 +436,7 @@ RETURN_VALUE eval(AST_NODE *p)
         case NUM_TYPE:  return (RETURN_VALUE) { NO_TYPE, p->data.number.value };
         case FUNC_TYPE: return evalFunction(p->data.function.name, p->data.function.opList);
         case SYM_TYPE:  return evalSymbol(p, p->data.symbol.name);
+        case COND_TYPE: return evalCondition(p);
         default:
             yyerror("Unkown node type");
             return (RETURN_VALUE) { NO_TYPE, 0.0 };

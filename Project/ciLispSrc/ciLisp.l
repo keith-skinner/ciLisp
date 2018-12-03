@@ -13,7 +13,7 @@ letter  [a-zA-Z]
 symbol  {letter}+
 
 type    "integer"|"real"
-func    "neg"|"abs"|"exp"|"sqrt"|"add"|"sub"|"mult"|"div"|"remainder"|"log"|"pow"|"max"|"min"|"exp2"|"cbrt"|"hypot"|"print"
+func    "neg"|"abs"|"exp"|"sqrt"|"add"|"sub"|"mult"|"div"|"remainder"|"log"|"pow"|"max"|"min"|"exp2"|"cbrt"|"hypot"|"print"|"equal"|"smaller"|"larger"
 
 %%
 
@@ -25,6 +25,11 @@ func    "neg"|"abs"|"exp"|"sqrt"|"add"|"sub"|"mult"|"div"|"remainder"|"log"|"pow
 "quit"      {
                 fprintf(stderr, "QUIT\n");
                 return QUIT;
+            }
+
+"cond"      {
+                fprintf(stderr, "COND\n");
+                return COND;
             }
 
 {type}      {
@@ -116,8 +121,7 @@ ssize_t getdelim(char **buf, size_t *bufsiz, int delimiter, FILE *fp)
 	}
 }
 
-ssize_t
-getline(char **buf, size_t *bufsiz, FILE *fp)
+ssize_t getline(char **buf, size_t *bufsiz, FILE *fp)
 {
 	return getdelim(buf, bufsiz, '\n', fp);
 }
@@ -130,7 +134,7 @@ int main(void)
 {
     // except for this line that can be uncommented to throw away debug printouts
     freopen("/dev/null", "w", stderr);
-
+    srand(6031993 /* consistent random numbers */);
     char *s_expr_str = NULL;
     size_t s_expr_str_len = 0;
     YY_BUFFER_STATE buffer;

@@ -36,6 +36,9 @@ typedef enum oper
     CBRT,
     HYPOT,
     PRINT,
+    EQUAL,
+    SMALLER,
+    LARGER,
     INVALID_OPER=255
 } OPER_TYPE;
 
@@ -54,7 +57,10 @@ typedef struct return_value
 
 
 typedef enum {
-    NUM_TYPE, FUNC_TYPE, SYM_TYPE
+    NUM_TYPE,
+    FUNC_TYPE,
+    SYM_TYPE,
+    COND_TYPE
 } AST_NODE_TYPE;
 
 
@@ -74,6 +80,12 @@ typedef struct
     struct ast_node *opList;
 } FUNCTION_AST_NODE;
 
+typedef struct {
+    struct ast_node *cond;
+    struct ast_node *zero;
+    struct ast_node *nonzero;
+} COND_AST_NODE;
+
 typedef struct ast_node 
 {
     struct symbol_table_node * scope;
@@ -84,6 +96,8 @@ typedef struct ast_node
         NUMBER_AST_NODE number;
         FUNCTION_AST_NODE function;
         SYMBOL_AST_NODE symbol;
+        COND_AST_NODE condition;
+
     } data;
     struct ast_node * next;
 } AST_NODE;
@@ -100,6 +114,7 @@ typedef struct symbol_table_node
 AST_NODE *symbol(char * name);
 AST_NODE *number(double value);
 AST_NODE *function(char *name, AST_NODE *opList);
+AST_NODE *condition(AST_NODE * cond, AST_NODE * nonzero, AST_NODE * zero);
 
 AST_NODE *scope(SYMBOL_TABLE_NODE * scope, AST_NODE * s_expr);
 AST_NODE *s_expr_list(AST_NODE *s_expr, AST_NODE * s_expr_list);
