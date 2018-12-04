@@ -42,12 +42,14 @@ DATA_TYPE resolveType(char * type)
     return NO_TYPE;
 }
 
+
+
 SYMBOL_TABLE_NODE * let_elem(char * type, char * name, AST_NODE * s_expr)
 {
     SYMBOL_TABLE_NODE * p = calloc(1, sizeof(SYMBOL_TABLE_NODE));
     p->val_type = resolveType(type);
     p->ident = name;
-    p->val = s_expr;
+    p->stack = s_expr;
     return p;
 }
 
@@ -59,8 +61,13 @@ int resolveFunc(char *func)
         "mult", "div",  "remainder",
         "log",  "pow",  "max",
         "min",  "exp2", "cbrt",
+<<<<<<< HEAD
         "hypot", "print", "equal",
         "smaller", "larger", ""
+=======
+        "hypot", "print", "equal", "smaller",
+        "larger", ""
+>>>>>>> 7215257... Done with task 6
     };
 
     int i = 0;
@@ -127,8 +134,26 @@ void functionParent(AST_NODE * p)
     }
 }
 
+AST_NODE * read()
+{
+    char * line = NULL;
+    size_t size = 0;
+    printf("read := ");
+    getline(&line, &size, stdin);
+    double value = strtod(line, NULL);
+    return number(value);
+}
+
 AST_NODE *function(char *funcName, AST_NODE *opList)
 {
+    if (strcmp(funcName, "rand") == 0) {
+        return number(rand()); //NOLINT
+    }
+
+    if (strcmp(funcName, "read") == 0) {
+        return read();
+    }
+
     AST_NODE *p = makeNode(FUNC_TYPE);
     p->data.function.name = funcName;
     p->data.function.opList = opList;
@@ -375,6 +400,7 @@ RETURN_VALUE evalFunction(char * funcName, AST_NODE * opList)
         printf("=>");
         print(opList);
         printf("\n");
+        return (RETURN_VALUE){ NO_TYPE, 0.0 };
     }
     if (func == ADD)
         return add(opList);

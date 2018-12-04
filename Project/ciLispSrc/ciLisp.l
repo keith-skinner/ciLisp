@@ -13,7 +13,11 @@ letter  [a-zA-Z]
 symbol  {letter}+
 
 type    "integer"|"real"
+<<<<<<< HEAD
 func    "neg"|"abs"|"exp"|"sqrt"|"add"|"sub"|"mult"|"div"|"remainder"|"log"|"pow"|"max"|"min"|"exp2"|"cbrt"|"hypot"|"print"|"equal"|"smaller"|"larger"
+=======
+func    "neg"|"abs"|"exp"|"sqrt"|"add"|"sub"|"mult"|"div"|"remainder"|"log"|"pow"|"max"|"min"|"exp2"|"cbrt"|"hypot"|"print"|"rand"|"read"|"equal"|"smaller"|"larger"
+>>>>>>> 7215257... Done with task 6
 
 %%
 
@@ -134,7 +138,11 @@ int main(void)
 {
     // except for this line that can be uncommented to throw away debug printouts
     freopen("/dev/null", "w", stderr);
+<<<<<<< HEAD
     srand(6031993 /* consistent random numbers */);
+=======
+    srand(19930603);
+>>>>>>> 7215257... Done with task 6
     char *s_expr_str = NULL;
     size_t s_expr_str_len = 0;
     YY_BUFFER_STATE buffer;
