@@ -1,3 +1,9 @@
+/**
+* Name: Keith Skinner
+* Lab: Final Project ciLisp
+* Date: 12/04/2018
+**/
+
 %option noyywrap
 %option nounput
 %option noinput
@@ -30,6 +36,10 @@ func    "neg"|"abs"|"exp"|"sqrt"|"add"|"sub"|"mult"|"div"|"remainder"|"log"|"pow
 "cond"      {
                 fprintf(stderr, "COND\n");
                 return COND;
+            }
+"lambda"    {
+                fprintf(stderr, "LAMBDA\n");
+                return LAMBDA;
             }
 
 {type}      {

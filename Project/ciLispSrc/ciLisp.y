@@ -1,3 +1,9 @@
+/**
+* Name: Keith Skinner
+* Lab: Final Project ciLisp
+* Date: 12/04/2018
+**/
+
 %{
     #include "ciLisp.h"
 %}
@@ -11,10 +17,10 @@
 
 %token <sval> FUNC SYMBOL TYPE
 %token <dval> NUMBER
-%token LPAREN RPAREN EOL QUIT LET COND
+%token LPAREN RPAREN EOL QUIT LET COND LAMBDA
 
 %type <astNode> s_expr f_expr s_expr_list
-%type <symNode> scope let_list let_elem
+%type <symNode> scope let_list let_elem arg_list
 
 %%
 
@@ -48,6 +54,10 @@ s_expr:
         fprintf(stderr, "[ LPAREN COND s_expr s_expr s_expr RPAREN ] => s_expr\n");
         $$ = condition($3, $4, $5);
     }
+    | LPAREN SYMBOL s_expr_list RPAREN {
+        fprintf(stderr, "[ LPAREN symbol s_expr_list RPAREN ] => s_expr\n");
+        $$ = function($2, $3);
+    }
     | QUIT {
         fprintf(stderr, "[ QUIT ] => s_expr\n");
         exit(EXIT_SUCCESS);
@@ -73,11 +83,10 @@ s_expr_list:
         fprintf(stderr, "[ s_expr ] => s_expr_list\n");
         $$ = $1;
     }
-    | s_expr_list s_expr { //TODO: put s_expr on the other side might help.
-        fprintf(stderr, "[] => s_expr_list\n");
+    | s_expr_list s_expr {
+        fprintf(stderr, "[ s_expr_list s_expr ] => s_expr_list\n");
         $$ = s_expr_list($1, $2);
     };
-
 
 scope:
     /* EMPTY */ {
@@ -102,11 +111,32 @@ let_list:
 let_elem:
     LPAREN TYPE SYMBOL s_expr RPAREN {
         fprintf(stderr, "[ LPAREN SYMBOL s_expr RPAREN ] => let_elem\n");
-        $$ = let_elem($2, $3, $4);
+        $$ = let_var_elem($2, $3, $4);
     }
     | LPAREN SYMBOL s_expr RPAREN {
         fprintf(stderr, "[ LPAREN SYMBOL s_expr RPAREN ] => let_elem\n");
-        $$ = let_elem(NULL, $2, $3);
+        $$ = let_var_elem(NULL, $2, $3);
+    }
+    | LPAREN TYPE SYMBOL LAMBDA LPAREN arg_list RPAREN s_expr RPAREN {
+        fprintf(stderr, "[ LPAREN TYPE SYMBOL LAMBDA LPAREN arg_list RPAREN s_expr RPAREN ] => let_elem\n");
+        $$ = let_func_elem($2, $3, $6, $8);
+    }
+    | LPAREN SYMBOL LAMBDA LPAREN arg_list RPAREN s_expr RPAREN {
+        fprintf(stderr, "[ LPAREN SYMBOL LAMBDA LPAREN arg_list RPAREN s_expr RPAREN ] => let_elem\n");
+        $$ = let_func_elem(NULL, $2, $5, $7);
     };
 
+arg_list:
+    /* EMPTY */ {
+        fprintf(stderr, "[ EMPTY ] => arg_list\n");
+        $$ = NULL;
+    }
+    | SYMBOL {
+        fprintf(stderr, "[ SYMBOL ] => arg_list\n");
+        $$ = let_arg_elem($1);
+    }
+    | arg_list SYMBOL {
+        fprintf(stderr, "[ SYMBOL arg_list ] => arg_list\n");
+        $$ = let_list($1, let_arg_elem($2));
+    };
 %%

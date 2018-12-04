@@ -1,3 +1,9 @@
+/**
+* Name: Keith Skinner
+* Lab: Final Project ciLisp
+* Date: 12/04/2018
+**/
+
 #include "ciLisp.h"
 #include <limits.h>
 
@@ -7,67 +13,16 @@ void yyerror(char *s) {
     // CLion will display stderr in a different color from stdin and stdout
 }
 
-
-SYMBOL_TABLE_NODE * findSymbol(SYMBOL_TABLE_NODE * symbol, const char * name)
-{
-    while (symbol != NULL) {
-        if ( strcmp(name, symbol->ident) == 0 )
-            return symbol;
-        symbol = symbol->next;
-    }
-    return NULL;
-}
-
-SYMBOL_TABLE_NODE * let_list(SYMBOL_TABLE_NODE * list, SYMBOL_TABLE_NODE * elem)
-{
-    SYMBOL_TABLE_NODE * node = findSymbol(list, elem->ident);
-    if (node != NULL) {
-        yyerror("duplicate symbol");
-        return list;
-    }
-    elem->next = list;
-    return elem;
-}
-
-DATA_TYPE resolveType(char * type)
-{
-    if (type == NULL)
-        return NO_TYPE;
-    if (strcmp(type, "integer") == 0)
-        return INTEGER_TYPE;
-    if (strcmp(type, "real") == 0)
-        return REAL_TYPE;
-    
-    yyerror("unknown type");
-    return NO_TYPE;
-}
-
-
-
-SYMBOL_TABLE_NODE * let_elem(char * type, char * name, AST_NODE * s_expr)
-{
-    SYMBOL_TABLE_NODE * p = calloc(1, sizeof(SYMBOL_TABLE_NODE));
-    p->val_type = resolveType(type);
-    p->ident = name;
-    p->stack = s_expr;
-    return p;
-}
-
 int resolveFunc(char *func)
 {
     char *funcs[] = {
-        "neg",  "abs",  "exp",
-        "sqrt", "add",  "sub",
-        "mult", "div",  "remainder",
-        "log",  "pow",  "max",
-        "min",  "exp2", "cbrt",
-<<<<<<< HEAD
-        "hypot", "print", "equal",
-        "smaller", "larger", ""
-=======
-        "hypot", "print", "equal", "smaller",
-        "larger", ""
->>>>>>> 7215257... Done with task 6
+            "neg",  "abs",  "exp",
+            "sqrt", "add",  "sub",
+            "mult", "div",  "remainder",
+            "log",  "pow",  "max",
+            "min",  "exp2", "cbrt",
+            "hypot", "print", "equal",
+            "smaller", "larger", ""
     };
 
     int i = 0;
@@ -77,21 +32,112 @@ int resolveFunc(char *func)
             return i;
         i++;
     }
-    yyerror("invalid function");
     return INVALID_OPER;
+}
+
+
+DATA_TYPE resolveType(char * type)
+{
+    if (type == NULL)
+        return NO_TYPE;
+    if (strcmp(type, "integer") == 0)
+        return INTEGER_TYPE;
+    if (strcmp(type, "real") == 0)
+        return REAL_TYPE;
+
+    yyerror("unknown type");
+    return NO_TYPE;
+}
+
+
+SYMBOL_TABLE_NODE * findSymbolScope(SYMBOL_TABLE_NODE * symbol, const char * name)
+{
+    while (symbol != NULL) {
+        if ( strcmp(name, symbol->ident) == 0 )
+            return symbol;
+        symbol = symbol->next;
+    }
+    return NULL;
+}
+SYMBOL_TABLE_NODE * findSymbol(AST_NODE * p, const char * name)
+{
+    if (p == NULL)
+        return NULL;
+    if (p->scope != NULL) {
+        SYMBOL_TABLE_NODE *node = findSymbolScope(p->scope, name);
+        if (node != NULL)
+            return node;
+    }
+    return findSymbol(p->parent, name);
+}
+
+
+SYMBOL_TABLE_NODE * let_list(SYMBOL_TABLE_NODE * list, SYMBOL_TABLE_NODE * elem)
+{
+    SYMBOL_TABLE_NODE * node = findSymbolScope(list, elem->ident);
+    if (node != NULL) {
+        yyerror("duplicate symbol");
+        return list;
+    }
+    node = list;
+    while (node->next != NULL)
+        node = node->next;
+    node->next = elem;
+    return list;
+}
+
+SYMBOL_TABLE_NODE * let_var_elem(char * type, char * name, AST_NODE * val)
+{
+    SYMBOL_TABLE_NODE * p = calloc(1, sizeof(SYMBOL_TABLE_NODE));
+    p->type = VARIABLE_TYPE;
+    p->val_type = resolveType(type);
+    p->ident = name;
+    p->val = val;
+    return p;
+}
+
+SYMBOL_TABLE_NODE * let_arg_elem(char * name)
+{
+    char *funcs[] = {
+        "neg",  "abs",  "exp",
+        "sqrt", "add",  "sub",
+        "mult", "div",  "remainder",
+        "log",  "pow",  "max",
+        "min",  "exp2", "cbrt",
+        "hypot", "print", "equal",
+        "smaller", "larger", ""
+    };
+    SYMBOL_TABLE_NODE * node = calloc(1, sizeof(SYMBOL_TABLE_NODE));
+    node->type = ARG_TYPE;
+    node->val_type = NO_TYPE;
+    node->ident = name;
+    return node;
+}
+
+
+SYMBOL_TABLE_NODE * let_func_elem(char * type, char * symbol, SYMBOL_TABLE_NODE * arg_list, AST_NODE * s_expr) {
+    SYMBOL_TABLE_NODE * node = calloc(1, sizeof(SYMBOL_TABLE_NODE));
+    node->type = LAMBDA_TYPE;
+    node->val_type = resolveType(type);
+    node->ident = symbol;
+    node->next = arg_list;
+    node->val = s_expr;
+    node->val->scope = node->next;
+    return node;
 }
 
 AST_NODE *s_expr_list(AST_NODE *s_expr_list, AST_NODE * s_expr)
 {
     AST_NODE * head = s_expr_list;
-    while(s_expr_list->next != NULL)
-        s_expr_list = s_expr_list->next;
-    s_expr_list->next = s_expr;
-    return head;
+    while(head->next != NULL)
+        head = head->next;
+    head->next = s_expr;
+    return s_expr_list;
 }
 
 AST_NODE *scope(SYMBOL_TABLE_NODE * scope, AST_NODE * s_expr)
 {
+
     s_expr->scope = scope;
     return s_expr;
 }
@@ -129,7 +175,7 @@ void functionParent(AST_NODE * p)
 {
     AST_NODE * op = p->data.function.opList;
     while (op != NULL) {
-        op->parent = p;
+        setParent(p, op);
         op = op->next;
     }
 }
@@ -173,32 +219,59 @@ AST_NODE *condition(AST_NODE * cond, AST_NODE * nonzero, AST_NODE * zero)
     return p;
 }
 
-
-void freeScope(SYMBOL_TABLE_NODE *p)
+void freeScope(SYMBOL_TABLE_NODE * p)
 {
     if (p == NULL)
         return;
-    free(p->ident);
-    freeNode(p->val);
+
     freeScope(p->next);
-    free(p);
+
+    free(p->ident);
+
+    switch(p->type)
+    {
+        case ARG_TYPE:
+            break;
+        case VARIABLE_TYPE:
+            freeNode(p->val);
+            break;
+        case LAMBDA_TYPE:
+            if (p->val != NULL)
+                p->val->scope = NULL;
+            freeNode(p->val);
+    }
+}
+
+void freeData(AST_NODE * p)
+{
+    if (p == NULL)
+        return;
+
+    switch (p->type)
+    {
+        case NUM_TYPE:
+            break;
+        case SYM_TYPE:
+            free(p->data.symbol.name);
+            break;
+        case COND_TYPE:
+            freeNode(p->data.condition.cond);
+            freeNode(p->data.condition.nonzero);
+            freeNode(p->data.condition.zero);
+            break;
+        case FUNC_TYPE:
+            free(p->data.function.name);
+            freeNode(p->data.function.opList);
+    }
 }
 
 void freeNode(AST_NODE *p)
 {
     if (p == NULL)
         return;
-
+    freeNode(p->next);
+    freeData(p);
     freeScope(p->scope);
-    if (p->type == FUNC_TYPE)
-    {
-        free(p->data.function.name);
-        freeNode(p->data.function.opList);
-    }
-    else if (p->type == SYM_TYPE)
-    {
-        free(p->data.symbol.name);
-    }
     free(p);
 }
 
@@ -241,32 +314,6 @@ void print(AST_NODE * opList)
     print(opList->next);
 }
 
-RETURN_VALUE add(AST_NODE * opList)
-{
-    if (opList == NULL)
-        return (RETURN_VALUE){ NO_TYPE, 0.0 };
-
-    RETURN_VALUE rest = add(opList->next);
-    RETURN_VALUE this = eval(opList);
-    return (RETURN_VALUE) {
-        evalFunctionType(ADD, this.type, rest.type),
-        this.value + rest.value
-    };
-}
-
-RETURN_VALUE mult(AST_NODE * opList)
-{
-    if (opList == NULL)
-        return (RETURN_VALUE) { NO_TYPE, 1.1 };
-
-    RETURN_VALUE rest = mult(opList->next);
-    RETURN_VALUE this = eval(opList);
-    return (RETURN_VALUE) {
-        evalFunctionType(MULT, this.type, rest.type),
-        this.value * rest.value
-    };
-}
-
 double evalFunctionValue(OPER_TYPE func, double op1, double op2)
 {
     switch( func )
@@ -289,12 +336,25 @@ double evalFunctionValue(OPER_TYPE func, double op1, double op2)
         case HYPOT:     return hypot(op1, op2);
         case REMAINDER: return fmod(op1, op2);
         default:
-            yyerror("undefined function");
+            yyerror("invalid function");
     }
     return 0.0;
 }
 
-int countParameters(AST_NODE * opList)
+int countParameters(SYMBOL_TABLE_NODE * p)
+{
+    int count = 0;
+    if (p == NULL)
+        return count;
+
+    while (p != NULL && p->type == ARG_TYPE) {
+        ++count;
+        p = p->next;
+    }
+    return count;
+}
+
+int countArguments(AST_NODE * opList)
 {
     int count = 0;
     while (opList != NULL) {
@@ -377,39 +437,113 @@ int minParameters(OPER_TYPE func)
     return 0;
 }
 
-bool evalFunctionNumParameters(char * funcName, OPER_TYPE func, AST_NODE * opList)
+bool isValidCall(char * funcName, int arguments, int min, int max)
 {
-    int count = countParameters(opList);
-    if (count < minParameters(func)) {
+    if (arguments < min) {
         printf("ERROR: too few parameters for the function %s", funcName);
         return false;
     }
-    if (count > maxParameters(func))
+    if (arguments > max) {
         printf("WARNING: too many parameters for the function %s", funcName);
+    }
     return true;
 }
 
-
-RETURN_VALUE evalFunction(char * funcName, AST_NODE * opList)
+bool evalFunctionNumParameters(char * funcName, OPER_TYPE func, AST_NODE * opList)
 {
-    OPER_TYPE func = resolveFunc(funcName);
-    if (!evalFunctionNumParameters(funcName, func, opList))
+    return isValidCall(funcName, countArguments(opList), minParameters(func), maxParameters(func));
+}
+
+
+RETURN_VALUE add(AST_NODE * opList)
+{
+    if (opList == NULL)
+        return (RETURN_VALUE){ NO_TYPE, 0.0 };
+
+    RETURN_VALUE rest = add(opList->next);
+    RETURN_VALUE this = eval(opList);
+    return (RETURN_VALUE) {
+            evalFunctionType(ADD, this.type, rest.type),
+            this.value + rest.value
+    };
+}
+
+RETURN_VALUE mult(AST_NODE * opList)
+{
+    if (opList == NULL)
+        return (RETURN_VALUE) { NO_TYPE, 1.1 };
+
+    RETURN_VALUE rest = mult(opList->next);
+    RETURN_VALUE this = eval(opList);
+    return (RETURN_VALUE) {
+            evalFunctionType(MULT, this.type, rest.type),
+            this.value * rest.value
+    };
+}
+
+//RETURN_VALUE evalLambda(AST_NODE * p)
+//{
+//
+//}
+
+RETURN_VALUE evalFunction(AST_NODE * p)
+{
+    OPER_TYPE func = resolveFunc(p->data.function.name);
+    if (func == INVALID_OPER) {
+
+        SYMBOL_TABLE_NODE *node = findSymbol(p, p->data.function.name);
+        if (node == NULL) {
+            yyerror("invalid function");
+            return (RETURN_VALUE) { NO_TYPE, 0.0 };
+        }
+
+        int params = countParameters(node->next);
+        if (!isValidCall(node->ident, countArguments(p->data.function.opList), params, params))
+            return (RETURN_VALUE) { NO_TYPE, 0.0 };
+
+        AST_NODE * argIter = p->data.function.opList;
+        SYMBOL_TABLE_NODE * paramIter = node->next;
+        while (paramIter != NULL && paramIter->type == ARG_TYPE) {
+            STACK_NODE * temp = paramIter->stack;
+            paramIter->stack = malloc(sizeof(STACK_NODE));
+            paramIter->stack->next = temp;
+            paramIter->stack->val = argIter;
+
+            argIter = argIter->next;
+            paramIter = paramIter->next;
+        }
+
+        RETURN_VALUE value = eval(node->val);
+
+        paramIter = node->next;
+        while (paramIter != NULL && paramIter->type == ARG_TYPE) {
+            STACK_NODE * temp = paramIter->stack;
+            paramIter->stack = paramIter->stack->next;
+            free(temp);
+
+            paramIter = paramIter->next;
+        }
+
+        return value;
+    }
+
+    if (!evalFunctionNumParameters(p->data.function.name, func, p->data.function.opList))
         return (RETURN_VALUE){ NO_TYPE, 0.0 };
 
     if (func == PRINT) {
         printf("=>");
-        print(opList);
+        print(p->data.function.opList);
         printf("\n");
         return (RETURN_VALUE){ NO_TYPE, 0.0 };
     }
     if (func == ADD)
-        return add(opList);
+        return add(p->data.function.opList);
 
     if (func == MULT)
-        return mult(opList);
+        return mult(p->data.function.opList);
 
-    RETURN_VALUE v1 = eval(opList);
-    RETURN_VALUE v2 = eval(opList->next);
+    RETURN_VALUE v1 = eval(p->data.function.opList);
+    RETURN_VALUE v2 = eval(p->data.function.opList->next);
     return (RETURN_VALUE) {
             evalFunctionType(func, v1.type, v2.type),
             evalFunctionValue(func, v1.value, v2.value)
@@ -433,15 +567,14 @@ RETURN_VALUE evalSymbolCast(SYMBOL_TABLE_NODE * node, RETURN_VALUE value)
 
 RETURN_VALUE evalSymbol(AST_NODE * p, char * name)
 {
-    if (p == NULL) {
+    SYMBOL_TABLE_NODE * node = findSymbol(p, name);
+    if (node == NULL) {
         yyerror("Undefined symbol");
         return (RETURN_VALUE) { NO_TYPE, 0.0 };
     }
-
-    SYMBOL_TABLE_NODE * node = findSymbol(p->scope, name);
-    if (node != NULL)
-        return evalSymbolCast(node, eval(node->val));
-    return evalSymbol(p->parent, name);
+    if (node->type == ARG_TYPE)
+        return eval(node->stack->val);
+    return eval(node->val);
 }
 
 RETURN_VALUE evalCondition(AST_NODE *p)
@@ -460,7 +593,7 @@ RETURN_VALUE eval(AST_NODE *p)
     switch( p->type )
     {
         case NUM_TYPE:  return (RETURN_VALUE) { NO_TYPE, p->data.number.value };
-        case FUNC_TYPE: return evalFunction(p->data.function.name, p->data.function.opList);
+        case FUNC_TYPE: return evalFunction(p);
         case SYM_TYPE:  return evalSymbol(p, p->data.symbol.name);
         case COND_TYPE: return evalCondition(p);
         default:

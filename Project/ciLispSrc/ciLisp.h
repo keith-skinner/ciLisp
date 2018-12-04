@@ -1,3 +1,9 @@
+/**
+* Name: Keith Skinner
+* Lab: Final Project ciLisp
+* Date: 12/04/2018
+**/
+
 #ifndef __cilisp_h_
 #define __cilisp_h_
 
@@ -120,7 +126,8 @@ typedef struct symbol_table_node
     SYMBOL_TYPE type;
     DATA_TYPE val_type;
     char *ident;
-    struct STACK_NODE * stack;
+    AST_NODE * val;
+    STACK_NODE * stack;
     struct symbol_table_node *next;
 } SYMBOL_TABLE_NODE;
 
@@ -133,8 +140,10 @@ AST_NODE *condition(AST_NODE * cond, AST_NODE * nonzero, AST_NODE * zero);
 AST_NODE *scope(SYMBOL_TABLE_NODE * scope, AST_NODE * s_expr);
 AST_NODE *s_expr_list(AST_NODE *s_expr, AST_NODE * s_expr_list);
 
-SYMBOL_TABLE_NODE * let_elem(char * type, char *name, AST_NODE *s_expr);
 SYMBOL_TABLE_NODE * let_list(SYMBOL_TABLE_NODE * list, SYMBOL_TABLE_NODE * elem);
+SYMBOL_TABLE_NODE * let_var_elem(char * type, char *name, AST_NODE *s_expr);
+SYMBOL_TABLE_NODE * let_arg_elem(char * name);
+SYMBOL_TABLE_NODE * let_func_elem(char * type, char * symbol, SYMBOL_TABLE_NODE * arg_list, AST_NODE * s_expr);
 
 void freeNode(AST_NODE *p);
 
