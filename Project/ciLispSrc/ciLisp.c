@@ -145,8 +145,10 @@ AST_NODE *scope(SYMBOL_TABLE_NODE * scope, AST_NODE * s_expr)
 AST_NODE *makeNode(AST_NODE_TYPE type)
 {
     AST_NODE * p = calloc(1, sizeof(AST_NODE));
-    if (p == NULL)
+    if (p == NULL) {
         yyerror("out of memory");
+        return NULL;
+    }
     p->type = type;
     return p;
 }
@@ -298,20 +300,22 @@ double divide(double op1, double op2)
     return op1 / op2;
 }
 
-void printVal(RETURN_VALUE op)
+RETURN_VALUE print(AST_NODE * opList)
 {
-    if (op.type == INTEGER_TYPE)
-        printf(" %.0lf", op.value);
-    else
-        printf(" %.2lf", op.value);
-}
-
-void print(AST_NODE * opList)
-{
-    if (opList == NULL)
-        return;
-    printVal(eval(opList));
-    print(opList->next);
+    RETURN_VALUE value = { NO_TYPE, 0.0};
+    if (opList != NULL) {
+        printf("=>");
+        while (opList != NULL) {
+            value = eval(opList);
+            if (value.type == INTEGER_TYPE)
+                printf(" %.0lf", value.value);
+            else
+                printf(" %.2lf", value.value);
+            opList = opList->next;
+        }
+        printf("\n");
+    }
+    return value;
 }
 
 double evalFunctionValue(OPER_TYPE func, double op1, double op2)
@@ -344,9 +348,6 @@ double evalFunctionValue(OPER_TYPE func, double op1, double op2)
 int countParameters(SYMBOL_TABLE_NODE * p)
 {
     int count = 0;
-    if (p == NULL)
-        return count;
-
     while (p != NULL && p->type == ARG_TYPE) {
         ++count;
         p = p->next;
@@ -459,6 +460,8 @@ RETURN_VALUE add(AST_NODE * opList)
 {
     if (opList == NULL)
         return (RETURN_VALUE){ NO_TYPE, 0.0 };
+    if (opList->next == NULL)
+        return eval(opList);
 
     RETURN_VALUE rest = add(opList->next);
     RETURN_VALUE this = eval(opList);
@@ -471,7 +474,7 @@ RETURN_VALUE add(AST_NODE * opList)
 RETURN_VALUE mult(AST_NODE * opList)
 {
     if (opList == NULL)
-        return (RETURN_VALUE) { NO_TYPE, 1.1 };
+        return (RETURN_VALUE) { NO_TYPE, 1.0 };
 
     RETURN_VALUE rest = mult(opList->next);
     RETURN_VALUE this = eval(opList);
@@ -481,67 +484,65 @@ RETURN_VALUE mult(AST_NODE * opList)
     };
 }
 
-//RETURN_VALUE evalLambda(AST_NODE * p)
-//{
-//
-//}
+void evalFunctionPop(SYMBOL_TABLE_NODE *node, SYMBOL_TABLE_NODE *paramIter) {
+    paramIter = node->next;
+    while (paramIter != NULL && paramIter->type == ARG_TYPE) {
+        STACK_NODE * temp = paramIter->stack;
+        paramIter->stack = paramIter->stack->next;
+        free(temp);
+        paramIter = paramIter->next;
+    }
+}
+
+void evalFunctionPush(AST_NODE *argIter, SYMBOL_TABLE_NODE *paramIter) {
+    while (paramIter != NULL && paramIter->type == ARG_TYPE) {
+        STACK_NODE * temp = paramIter->stack;
+        paramIter->stack = malloc(sizeof(STACK_NODE));
+        paramIter->stack->next = temp;
+        paramIter->stack->val = argIter;
+
+        argIter = argIter->next;
+        paramIter = paramIter->next;
+    }
+}
+
+RETURN_VALUE evalFunctionLambda(AST_NODE *p) {
+    SYMBOL_TABLE_NODE *node = findSymbol(p, p->data.function.name);
+    if (node == NULL) {
+        yyerror("invalid function");
+        return (RETURN_VALUE) { NO_TYPE, 0.0 };
+    }
+
+    int params = countParameters(node->next);
+    if (!isValidCall(node->ident, countArguments(p->data.function.opList), params, params))
+        return (RETURN_VALUE) { NO_TYPE, 0.0 };
+
+    evalFunctionPush(p->data.function.opList, node->next);
+    RETURN_VALUE value = eval(node->val);
+    evalFunctionPop(node, node->next);
+
+    return value;
+}
 
 RETURN_VALUE evalFunction(AST_NODE * p)
 {
     OPER_TYPE func = resolveFunc(p->data.function.name);
-    if (func == INVALID_OPER) {
+    //user defined functions
+    if (func == INVALID_OPER)
+        return evalFunctionLambda(p);
 
-        SYMBOL_TABLE_NODE *node = findSymbol(p, p->data.function.name);
-        if (node == NULL) {
-            yyerror("invalid function");
-            return (RETURN_VALUE) { NO_TYPE, 0.0 };
-        }
-
-        int params = countParameters(node->next);
-        if (!isValidCall(node->ident, countArguments(p->data.function.opList), params, params))
-            return (RETURN_VALUE) { NO_TYPE, 0.0 };
-
-        AST_NODE * argIter = p->data.function.opList;
-        SYMBOL_TABLE_NODE * paramIter = node->next;
-        while (paramIter != NULL && paramIter->type == ARG_TYPE) {
-            STACK_NODE * temp = paramIter->stack;
-            paramIter->stack = malloc(sizeof(STACK_NODE));
-            paramIter->stack->next = temp;
-            paramIter->stack->val = argIter;
-
-            argIter = argIter->next;
-            paramIter = paramIter->next;
-        }
-
-        RETURN_VALUE value = eval(node->val);
-
-        paramIter = node->next;
-        while (paramIter != NULL && paramIter->type == ARG_TYPE) {
-            STACK_NODE * temp = paramIter->stack;
-            paramIter->stack = paramIter->stack->next;
-            free(temp);
-
-            paramIter = paramIter->next;
-        }
-
-        return value;
-    }
-
+    //can I call this function
     if (!evalFunctionNumParameters(p->data.function.name, func, p->data.function.opList))
         return (RETURN_VALUE){ NO_TYPE, 0.0 };
 
-    if (func == PRINT) {
-        printf("=>");
-        print(p->data.function.opList);
-        printf("\n");
-        return (RETURN_VALUE){ NO_TYPE, 0.0 };
-    }
+    //"special" n-ary functions
+    if (func == PRINT)
+        return print(p->data.function.opList);
     if (func == ADD)
         return add(p->data.function.opList);
-
     if (func == MULT)
         return mult(p->data.function.opList);
-
+    //other built in functions
     RETURN_VALUE v1 = eval(p->data.function.opList);
     RETURN_VALUE v2 = eval(p->data.function.opList->next);
     return (RETURN_VALUE) {
@@ -573,8 +574,8 @@ RETURN_VALUE evalSymbol(AST_NODE * p, char * name)
         return (RETURN_VALUE) { NO_TYPE, 0.0 };
     }
     if (node->type == ARG_TYPE)
-        return eval(node->stack->val);
-    return eval(node->val);
+        return evalSymbolCast(node, eval(node->stack->val));
+    return evalSymbolCast(node, eval(node->val));
 }
 
 RETURN_VALUE evalCondition(AST_NODE *p)

@@ -91,7 +91,7 @@ func    "neg"|"abs"|"exp"|"sqrt"|"add"|"sub"|"mult"|"div"|"remainder"|"log"|"pow
 
 %%
 
-#define KEITH
+//#define KEITH
 #ifdef KEITH
 ssize_t getdelim(char **buf, size_t *bufsiz, int delimiter, FILE *fp)
 {
