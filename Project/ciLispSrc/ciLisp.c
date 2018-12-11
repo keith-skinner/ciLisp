@@ -122,7 +122,14 @@ SYMBOL_TABLE_NODE * let_func_elem(char * type, char * symbol, SYMBOL_TABLE_NODE 
     node->ident = symbol;
     node->next = arg_list;
     node->val = s_expr;
-    node->val->scope = node->next;
+    if(node->val->scope == NULL)
+        node->val->scope = node->next;
+    else {
+        SYMBOL_TABLE_NODE *scope = node->val->scope;
+        while (scope->next != NULL)
+            scope = scope->next;
+        scope->next = node->next;
+    }
     return node;
 }
 
